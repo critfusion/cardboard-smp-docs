@@ -38,6 +38,7 @@ Everything installed on the server and what it does. If you hit a command you do
 | **BlueMap** | 5.16 | Web map at :8100 | `/bluemap reload`, `/bluemap status` |
 | **Chunky** | 1.4.40 | World pre-generation for perf | `/chunky start`, `/chunky pause`, `/chunky status` |
 | **CardboardStarterKit** | 0.1.0 | First-join starter kit (auto-expires) | *(automatic; no commands yet)* |
+| **CardboardBuildAI** | 0.1.0 | Natural-language builder (Claude API) | `/ai <prompt>`, `/ai <model> <prompt>`, `/ai undo`, `/ai models` |
 
 ---
 
@@ -121,12 +122,53 @@ For spawn builds, fixing griefing, or quick terraforming:
 
 **Please don't WE in areas where players have builds** unless you've checked `/co lookup` first.
 
+### AI builder (`/ai`)
+
+Describe a structure in English; the server calls the Claude API and places blocks around you. Builds drop relative to where you're standing.
+
+| Command | What it does |
+|---|---|
+| `/ai <description>` | Build using the **default model** (Sonnet 4.6 — cheap, good for small builds) |
+| `/ai opus <description>` | Use **Claude Opus 4.7** — best quality, best for complex/large builds, ~5× the cost |
+| `/ai sonnet <description>` | Force Sonnet explicitly |
+| `/ai haiku <description>` | Use **Haiku 4.5** — fastest & cheapest, lower quality |
+| `/ai undo` | Revert your most recent build (keeps a 5-deep history) |
+| `/ai models` | Show the current default model + alias list |
+
+**Examples:**
+```
+/ai a small oak cabin with a porch and a chimney
+/ai opus a detailed medieval watchtower 15 blocks tall with battlements
+/ai haiku a 20x20 cobblestone patio
+/ai undo
+```
+
+**Limits:**
+- Max build size: 48 blocks on each axis (the model is told this).
+- Per-player cooldown: 30 seconds between builds.
+- Only 2 builds can run concurrently across the whole server.
+- Ops bypass cooldown + concurrency cap (but not size).
+
+**Costs (rough):**
+| Model | Per small build | Per detailed build |
+|---|---|---|
+| Haiku | ~$0.005 | ~$0.02 |
+| Sonnet *(default)* | ~$0.02–0.08 | ~$0.10 |
+| Opus | ~$0.10 | ~$0.20–0.40 |
+
+**When builds look bad:** `/ai undo`, reword the prompt more specifically, try a different model. Opus is notably better for anything involving structure (roofs, stairs, multi-room interiors). Sonnet is fine for simple geometric builds. Prompts with **dimensions** (e.g. "7 blocks wide, 5 tall") produce tighter results than vague ones.
+
+**Safety:** banned-block list is enforced server-side (bedrock, barriers, command blocks, TNT, lava, spawners — all rejected). Model is instructed not to generate these, but placements are filtered either way.
+
+**Costs are tracked on the Anthropic console** (console.anthropic.com → Usage). If you see runaway spend, tell admin to cap the key.
+
 ### Cardboard SMP specifics
 
 | Feature | Mod-relevant |
 |---|---|
 | Day cycle | Locked (`gamerule advance_time false`). Don't change; it's intentional while the map is built. |
 | Starter kit | Auto-given on first join. Items vanish after 5 min, on drop, on death, or on logout. Configurable in `plugins/CardboardStarterKit/config.yml` on the server. |
+| AI builder | `/ai` calls the Claude API to place blocks. Ops-only by default. See the AI builder section above. |
 | Spawn protection | `spawn-protection=16` in server.properties — 16-block radius around 0,0,0 is build-protected (ops only). Full no-PvP spawn zone is not yet defined in WorldGuard. |
 | Bedrock players | Appear with `.` prefix. Commands work the same — `/tp .PlayerName` is valid. |
 
