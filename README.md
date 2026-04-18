@@ -5,7 +5,8 @@ Public reference docs for the Cardboard SMP Minecraft server (`mc.mrcriter.com`)
 ## Start here
 
 - **[MODERATORS.md](MODERATORS.md)** — plugin catalog, moderator commands, common scenarios. Read this first if you're a new mod.
-- **[ADMIN.md](ADMIN.md)** — ops runbook: service control, plugin management, backups, troubleshooting. For server admins.
+
+The admin runbook (`ADMIN.md`) lives in the private plugin repo instead — it contains infrastructure details (paths, SSH, vault pointers) that shouldn't be public.
 
 ## About the server
 
