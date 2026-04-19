@@ -1,6 +1,6 @@
-# Cardboard SMP — Moderator Guide
+# Chariot SMP — Moderator Guide
 
-Welcome. This is everything a moderator needs to know about the plugins running on Cardboard SMP, what commands you have access to, and how to handle common situations.
+Welcome. This is everything a moderator needs to know about the plugins running on Chariot SMP, what commands you have access to, and how to handle common situations.
 
 If you're new, **read the [Common Scenarios](#common-scenarios) section first** — it covers 90% of what you'll actually do day-to-day.
 
@@ -37,8 +37,8 @@ Everything installed on the server and what it does. If you hit a command you do
 | **ViaRewind** | 4.0.15 | Legacy client support (1.7–1.12) | *(transparent)* |
 | **BlueMap** | 5.16 | Web map at :8100 | `/bluemap reload`, `/bluemap status` |
 | **Chunky** | 1.4.40 | World pre-generation for perf | `/chunky start`, `/chunky pause`, `/chunky status` |
-| **CardboardStarterKit** | 0.1.0 | First-join starter kit (auto-expires) | *(automatic; no commands yet)* |
-| **CardboardBuildAI** | 0.1.0 | Natural-language builder (Claude API) | `/ai <prompt>`, `/ai <model> <prompt>`, `/ai undo`, `/ai models` |
+| **ChariotStarterKit** | 0.1.0 | First-join starter kit (auto-expires) | *(automatic; no commands yet)* |
+| **ChariotBuildAI** | 0.1.0 | Natural-language builder (Claude API) | `/ai <prompt>`, `/ai <model> <prompt>`, `/ai undo`, `/ai models` |
 
 ---
 
@@ -162,12 +162,12 @@ Describe a structure in English; the server calls the Claude API and places bloc
 
 **Costs are tracked on the Anthropic console** (console.anthropic.com → Usage). If you see runaway spend, tell admin to cap the key.
 
-### Cardboard SMP specifics
+### Chariot SMP specifics
 
 | Feature | Mod-relevant |
 |---|---|
 | Day cycle | Locked (`gamerule advance_time false`). Don't change; it's intentional while the map is built. |
-| Starter kit | Auto-given on first join. Items vanish after 5 min, on drop, on death, or on logout. Configurable in `plugins/CardboardStarterKit/config.yml` on the server. |
+| Starter kit | Auto-given on first join. Items vanish after 5 min, on drop, on death, or on logout. Configurable in `plugins/ChariotStarterKit/config.yml` on the server. |
 | AI builder | `/ai` calls the Claude API to place blocks. Ops-only by default. See the AI builder section above. |
 | Spawn protection | `spawn-protection=16` in server.properties — 16-block radius around 0,0,0 is build-protected (ops only). Full no-PvP spawn zone is not yet defined in WorldGuard. |
 | Bedrock players | Appear with `.` prefix. Commands work the same — `/tp .PlayerName` is valid. |
@@ -231,7 +231,7 @@ Don't hesitate to escalate to admin (@mrcriter) if:
 - The issue involves real-world threats, doxing, or illegal content
 - The server appears to be under attack (many accounts joining rapidly, all getting kicked)
 - A plugin error appears in chat repeatedly
-- You need to restart the server (mods can't do this; admin has `sudo cardboard-cmd ...` access)
+- You need to restart the server (mods can't do this; admin has `sudo chariot-cmd ...` access)
 
 ---
 
