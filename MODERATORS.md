@@ -39,9 +39,10 @@ Everything installed on the server and what it does. If you hit a command you do
 | **Chunky** | 1.4.40 | World pre-generation for perf | `/chunky start`, `/chunky pause`, `/chunky status` |
 | **ChariotStarterKit** | 0.1.0 | First-join starter kit (auto-expires) | *(automatic; no commands yet)* |
 | **ChariotBuildAI** | 0.1.0 | Natural-language builder (Claude API) | `/ai <prompt>`, `/ai <model> <prompt>`, `/ai undo`, `/ai models` |
-| **ChariotSafeRooms** | 0.1.0 | Permanent bedrock-layer safe rooms + decor box system | `/safe`, `/saferoom info`, `/saferoom assign\|unassign\|list\|reload\|decortemplate\|givedecor`, `/createdecorchest` |
+| **ChariotSafeRooms** | 0.1.0 | Permanent bedrock-layer safe rooms + decor box + admin-vault chest tooling | `/safe`, `/saferoom info`, `/saferoom assign\|unassign\|list\|reload\|decortemplate\|givedecor`, `/adminvault place\|list` |
 | **ChariotKeyShop** | 0.1.0 | Key-tier loot shop, chars currency, chest-linked tier shops | `/keys`, `/keyshop`, `/chars`, `/buykey`, `/keyshop <tier>template`, `/keyshop link\|unlink` |
 | **ChariotGoldenEgg** | 0.1.0 | Random treasure-hunt event — chest spawns somewhere on the map every 30-90 min | `/goldenegg status\|drop\|cancel\|reload` |
+| **ChariotProtect** | 0.1.0 | Op-friendly per-block protection toggle | `/protect on\|off\|area\|remove\|status` |
 
 ---
 
@@ -191,7 +192,7 @@ There's only one purchasable size (10×10×10). The plugin still supports `mediu
 | `/saferoom reload` | Admin | Re-read `rooms.yml` + `owners.yml` from disk. |
 | `/saferoom decortemplate` | Admin | Look at a chest within 8 blocks; saves its contents as the Decor Box recipe (`plugins/ChariotSafeRooms/decor_template.yml`). Re-run anytime to update. |
 | `/saferoom givedecor <player> [--force]` | Admin | Mint a tagged Decor Box shulker (populated from the template) and add it to the player's inventory. Refuses if they don't own a safe room or already received one (override with `--force`). |
-| `/createdecorchest` | Admin | Place a chest at the block you're looking at, populated from `decor_template.yml`. Used to drop decor reference chests in the admin vault. |
+| `/createdecorchest` | Admin | **Deprecated** — alias for `/adminvault place decorchest`. Kept for back-compat. |
 
 **Decor box restrictions** (auto-enforced once a player has one):
 - The Decor shulker can only be **placed inside the owner's own safe room interior** — anywhere else, BlockPlaceEvent is cancelled.
@@ -256,14 +257,20 @@ A 12×12×12 stone-brick room at the world ceiling that holds the canonical temp
 | **MYTHICAL** at (2, 309, -3) | Loot template for the Mythical key | `/keyshop mythical` |
 | **DECOR** (when added) at (4, 309, -3) | Loot template for the Decor Box shulker | Used by `/saferoom givedecor` |
 
-**Day-to-day workflow inside the vault:**
+**Day-to-day workflow inside the vault — use `/adminvault`:**
+
+| Command | What it does |
+|---|---|
+| `/adminvault place <type>` | Look at a floor block; chest+sign appear above it. Existing chest+sign of the same type are removed first (so it acts like a "move"). Tier types auto-link to `/keyshop <tier>`. Aliased `/av`. |
+| `/adminvault list` | Show currently tracked locations of all admin-vault chests. |
+
+Types: `decorchest` · `goldenegg` · `common` · `gold` · `prime` · `mythical`. Contents come from the matching template (`templates/<tier>.yml`, `decor_template.yml`, or the goldenegg `item-pool` config).
+
+Other workflows:
 
 1. **Edit a tier's loot:** open the relevant chest, change items, look at it, run `/keyshop <tier>template` (e.g. `/keyshop goldtemplate`). Saves to `plugins/ChariotKeyShop/templates/<tier>.yml` and reloads instantly. Right-clicking the linked chest now serves the new loot.
-2. **Re-link a chest** (e.g. after rebuilding the vault): look at the chest, run `/keyshop link <tier>`. Persisted in `chest_links.yml`.
-3. **Edit decor box loot:** open the decor chest, change items, run `/saferoom decortemplate`. Then `/saferoom givedecor <player>` mints a tagged shulker for them.
-4. **Drop a fresh decor reference chest:** look at where you want it placed, run `/createdecorchest` — places a chest above the looked-at block, populated from the template, with a "DECOR" sign on top.
-
-The right-click → keyshop-GUI behaviour comes from `/keyshop link <tier>`. If you ever break/replace a template chest you'll need to re-link it (its block coords change in `chest_links.yml`).
+2. **Edit decor box loot:** open the decor chest, change items, run `/saferoom decortemplate`. Then `/saferoom givedecor <player>` mints a tagged shulker for them.
+3. **Manual chest linking** (rare — `/adminvault place` does this automatically): look at a chest, run `/keyshop link <tier>` to wire its right-click into the keyshop GUI. `/keyshop unlink` to undo. Stored in `chest_links.yml`.
 
 ### Golden Egg event (`/goldenegg`)
 
@@ -287,6 +294,20 @@ A random treasure-hunt event. Every 30-90 minutes a chest spawns at a random sur
 | `/goldenegg reload` | Reload `plugins/ChariotGoldenEgg/config.yml` |
 
 The item pool is editable in `plugins/ChariotGoldenEgg/config.yml` → `item-pool`. A `/goldenegg savetemplate` command (snapshot a chest to populate the pool) and `/goldenegg place` (spawn a reference chest in the admin vault) are planned but not implemented yet.
+
+### Block protection (`/protect`)
+
+ChariotProtect tracks individual block coordinates as "protected" — break / explosion / piston / lava-flow events on those blocks are cancelled at HIGH event priority (so even ops have to `/protect remove` first). Two ways to mark blocks:
+
+| Command | What it does |
+|---|---|
+| `/protect on` | Toggle ON: every block YOU place from now on is auto-protected. Action-bar shows `✓ block protected` on each placement. |
+| `/protect off` | Toggle OFF — placements stop auto-protecting. |
+| `/protect area` | Protects every non-air block inside your current WorldEdit selection. Make a selection first: hold a wooden axe (`//wand`), left-click corner 1, right-click corner 2, then `/protect area`. |
+| `/protect remove` | Un-protect the block you're looking at (within 8 blocks). |
+| `/protect status` | Show current toggle state + total protected-block count. |
+
+Persisted in `plugins/ChariotProtect/protected_blocks.yml`. Permission: `chariot.protect.use` (op default). For larger admin-managed areas (entire builds, claims), prefer **WorldGuard regions** (`//wand` → `/rg define <name>` → `/rg flag <name> build deny`) — that's what the spawn region, the Colosseum, the floating islands, and the chariot monument all use.
 
 ### Random teleport (`/rtp`)
 
