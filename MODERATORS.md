@@ -39,6 +39,8 @@ Everything installed on the server and what it does. If you hit a command you do
 | **Chunky** | 1.4.40 | World pre-generation for perf | `/chunky start`, `/chunky pause`, `/chunky status` |
 | **ChariotStarterKit** | 0.1.0 | First-join starter kit (auto-expires) | *(automatic; no commands yet)* |
 | **ChariotBuildAI** | 0.1.0 | Natural-language builder (Claude API) | `/ai <prompt>`, `/ai <model> <prompt>`, `/ai undo`, `/ai models` |
+| **ChariotSafeRooms** | 0.1.0 | Permanent bedrock-layer safe rooms + decor box system | `/safe`, `/saferoom info`, `/saferoom assign|unassign|list|reload|decortemplate|givedecor`, `/createdecorchest` |
+| **ChariotKeyShop** | 0.1.0 | Key-tier loot shop, chars currency, chest-linked tier shops | `/keys`, `/keyshop`, `/chars`, `/buykey`, `/keyshop <tier>template`, `/keyshop link|unlink` |
 
 ---
 
@@ -171,6 +173,69 @@ Describe a structure in English; the server calls the Claude API and places bloc
 | AI builder | `/ai` calls the Claude API to place blocks. Ops-only by default. See the AI builder section above. |
 | Spawn protection | `spawn-protection=16` in server.properties — 16-block radius around 0,0,0 is build-protected (ops only). Full no-PvP spawn zone is not yet defined in WorldGuard. |
 | Bedrock players | Appear with `.` prefix. Commands work the same — `/tp .PlayerName` is valid. |
+
+### Safe Rooms (`/safe`, `/saferoom`, `/createdecorchest`)
+
+ChariotSafeRooms manages the 10×10×10 private rooms players buy on the Tebex store. Rooms live at the bedrock layer (y=−63..−52). Walls are indestructible (BlockBreak/Place/Explode/Piston/LiquidFlow all cancelled by the plugin — even ops can't break them). Owners can build inside their own room; non-owners cannot place blocks there. PvP is disabled inside any safe room.
+
+| Command | Who | What it does |
+|---|---|---|
+| `/safe` | Anyone | Teleport to your owned room. Tells you "buy one at the store" if you don't own one. |
+| `/saferoom info` | Anyone | Print your room id and spawn coords. |
+| `/saferoom list` | Admin | Tier counts: how many small/medium/large rooms exist and how many are owned. |
+| `/saferoom assign <player> <small\|medium\|large>` | Admin | Pull the next free room from the tier and bind it to the player. This is what the Tebex on-purchase command runs. |
+| `/saferoom unassign <player>` | Admin | Release a player's room back to the free pool. |
+| `/saferoom reload` | Admin | Re-read `rooms.yml` + `owners.yml` from disk. |
+| `/saferoom decortemplate` | Admin | Look at a chest within 8 blocks; saves its contents as the Decor Box recipe (`plugins/ChariotSafeRooms/decor_template.yml`). Re-run anytime to update. |
+| `/saferoom givedecor <player> [--force]` | Admin | Mint a tagged Decor Box shulker (populated from the template) and add it to the player's inventory. Refuses if they don't own a safe room or already received one (override with `--force`). |
+| `/createdecorchest` | Admin | Place a chest at the block you're looking at, populated from `decor_template.yml`. Used to drop decor reference chests in the admin vault. |
+
+**Decor box restrictions** (auto-enforced once a player has one):
+- The Decor shulker can only be **placed inside the owner's own safe room interior** — anywhere else, BlockPlaceEvent is cancelled.
+- Decor items **cannot be dropped** (`PlayerDropItemEvent` cancelled).
+- Decor items **cannot enter chests, hoppers, the Auction House, shops, anvils, or crafting** — only the owner's inventory and their Decor shulker GUI accept them.
+- Every 5 seconds the plugin scans for decor items in players who are outside their room and silently strips them (the box itself is kept so they can relocate).
+
+**Custom-spawn rooms** (e.g. `custom_ethan`): a player can have their `/safe` point to any coordinate by hand-editing `plugins/ChariotSafeRooms/rooms.yml`. Used when the owner built their own private room aboveground and we just want `/safe` to teleport them there.
+
+**Admin sky vault** at `0, 309, 0`: a 12×12×12 stone-brick room at world ceiling holding the keystore template chests. Marked as room id `admin_vault` with a 1×1 dummy interior, so the entire envelope is treated as wall and is unbreakable by anyone.
+
+### Key Shop (`/keys`, `/keyshop`, `/chars`, `/buykey`)
+
+ChariotKeyShop runs the four-tier crate-key economy: **Common / Gold / Prime / Mythical**. Keys are tagged tripwire-hook items in player inventories; chars (`₵`) are the in-game currency that converts to keys.
+
+| Command | Who | What it does |
+|---|---|---|
+| `/keys` | Anyone | Show your key balance |
+| `/keys give <player> <tier> [n]` | Admin | Give n keys of a tier |
+| `/keys reload` | Admin | Re-read `config.yml` |
+| `/keyshop` | Anyone | Open the tier picker GUI |
+| `/keyshop <common\|gold\|prime\|mythical>` | Anyone | Open one tier directly |
+| `/buykey <tier> [amount]` | Anyone | Convert chars → keys (confirmation GUI) |
+| `/chars` | Anyone | Show your ₵ balance |
+| `/chars give\|take\|set <player> <amount>` | Admin | Adjust balances |
+| `/chars top` | Anyone | Top-10 leaderboard |
+
+**Loot templates** — define what a tier rewards by snapshotting a chest:
+
+1. Fill any chest, trapped chest, barrel, or shulker with the items you want in that tier.
+2. Look at the container (within 8 blocks) and run **one** of:
+   - `/keyshop commontemplate`
+   - `/keyshop goldtemplate`
+   - `/keyshop primetemplate`
+   - `/keyshop mythicaltemplate`
+3. Saved to `plugins/ChariotKeyShop/templates/<tier>.yml` and reloaded immediately. The next time someone opens `/keyshop <tier>` they see your snapshot — full ItemStack with enchants, trims, and components preserved.
+
+To revert a tier to the legacy `tiers:` config in `config.yml`: delete the corresponding `templates/<tier>.yml` and `/keys reload`.
+
+**Chest-linked tier shops** — turn a physical chest into a portal that opens the keyshop GUI:
+
+| Command | What it does |
+|---|---|
+| `/keyshop link <tier>` | Admin: while looking at a chest, links its block coords to the tier. Right-clicking that chest now opens `/keyshop <tier>` instead of the chest's vanilla inventory. Persisted in `chest_links.yml`. |
+| `/keyshop unlink` | Admin: removes the link from the chest you're looking at. |
+
+Used at the admin sky vault to make the four template chests double as a working storefront preview.
 
 ---
 
